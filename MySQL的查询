@@ -1,0 +1,164 @@
+------第一部分：创建表-------
+
+create table Student 
+(
+  Sno char(7) not null primary key,
+  Sname varchar(10) not null unique,
+  Ssex char(1) check(Ssex='男' or Ssex='女') default '男',
+  Sage tinyint unsigned,
+  Sdept char(2)  
+);
+
+create table SC 
+(
+  Sno char(7),
+  Cno char(4),
+  Grade tinyint unsigned check(Grade between 0 and 100),
+  primary key(Sno, Cno),
+  foreign key(Sno) references Student(Sno),
+  foreign key(Cno) references Course(Cno)  
+);
+-- 创建 Course 表
+create table Course
+(
+  Cno char(4) not null primary key,
+  Cname varchar(20) not null unique,
+  Cpno char(4),
+  Ccredit decimal(2, 1) check (Ccredit * 10 % 5 = 0),
+  foreign key(Cpno) references Course(Cno)
+);
+insert into Student values('2021001', '黄兰', '女', 18, 'CS');
+insert into Student values
+('2021002', '罗小军', '男', 19, 'CS'),
+('2021003', '王欢', '女', 20, 'SE'),
+('2021004', '雷鸣', '男', 18, 'MA');
+
+
+set foreign_key_checks = 0;
+
+insert into course values 
+('1001','高等数学',null,4.0),
+('1002','C语言程序设计',null,4.0),
+('1003','Web开发技术',1005,2.5),
+('1004','数据结构',1002,4.0),
+('1005','数据库',1004,4.0),
+('1006','算法分析与设计',1004,3.0),
+('1007','数值分析',1001,2.5);
+set foreign_key_checks = 1;
+
+insert into SC values
+('2021001','1001',92),
+('2021001','1002',75),
+('2021001','1003',68),
+('2021002','1001',85),
+('2021002','1002',50);
+
+------第二部分：查询表中数据--------
+select Sno as 学号,Sname as 姓名 from Student;
+
+
+select * from student
+where ssex ='女'and Sdept='cs';
+
+
+select * from Student where Sdept ='CS'or SDEPT='MA';
+
+
+select * from SC where Grade between 50 and 75;
+select * from SC where Grade not between 50 and 75;
+
+
+select * from Course where Cpno = null;
+select * from Course where Cpno is null;
+select * from Course where Cpno is not null;
+
+
+select * from Course where Cname like'%分析%';
+select * from Student where Sname not like'王_%';
+
+
+select * from Student order by Sdept asc;
+-- 升序
+select * from Student order by Sdept desc;
+-- 降序
+select * from Student order by Sdept;
+-- 默认升序
+select * from Student order by Sdept desc,Sage desc;
+
+select * from Course limit 2,4;
+-- 2条后的4条
+
+
+select count(Sno) from Student;
+select count(Sname) from Student;
+select count( *) from Student;
+-- 计算元组个数；
+select count(1) from Student;
+-- 遍历每一行，每行产生常量1，统计全部行
+
+
+select count(all Sdept) from Student;
+select count(Sdept) from Student;
+select count(distinct Sdept) from Student;
+-- 重复值不累积
+
+
+select max(Grade),min(Grade),avg(Grade) from SC where Cno ='1001';
+
+
+select Cno,count( *) from SC group by Cno;
+select Sno,count( *) from SC group by Sno having count( *)>2;
+select Cno,count( *) from SC group by Cno having count( *)>2;
+-- having只能接在group by 后面，having用于统计后的筛选
+select Sno,count( *) from SC where Grade>60 group by Sno having count( *)>2;
+select Cno,avg(Grade) from SC group by Cno having avg(Grade)>75; 
+
+
+select * from Student,SC;
+-- 隐式连接
+select * from Student cross join SC;
+-- 显示连接
+-- 笛卡尔积（交叉连接）
+
+
+select * from Student,SC where Student.Sno=SC.Sno;
+select Student.Sno,Sname,SC.Sno,Cno,Grade from Student,SC where Cno='1001' and Student.Sno=SC.Sno;
+-- 隐式连接
+select Student.Sno,Sname,SC.Sno,Cno,Grade from Student inner join SC on Cno='1001' and Student.Sno=SC.Sno;
+-- 显示连接
+
+
+select Student.Sno,Sname,Course.Cno,Cname,SC.Sno,SC.Cno,Grade from Student ,Course,SC where Course.Cno=SC.Cno and Student.Sno=SC.Sno and Sc.cno='1001';
+-- 隐式连接
+select student.sno,sname,cname,grade from student inner join sc on student.sno=sc.sno inner join course on course.cno=sc.cno and sc.cno='1001';
+-- 显示连接
+select Student.Sno,Sname,Ssex,Cno,Grade from Student left join SC on Student.Sno=SC.Sno;
+
+
+-- 自身连接
+select A.sno from sc A,sc B where A.cno='1001' and B.cno='1002' and A.sno=B.sno;
+-- 隐式连接
+select A.sno from sc A inner join sc B on A.sno=B.sno and A.cno='1001' and B.cno='1002';
+-- 显示连接
+select sno from sc where cno ='1001' union all select sno from sc where cno ='1002';
+select @@version;
+
+
+select * from Student natural join SC;
+-- 自然连接
+
+
+-- 无关子查询，父子相关，子可单独运行且运行一次
+select sno,sname from student where sno in(select sno from sc where cno='1001');
+-- 一个值用=，多个值用in
+select sno,sname from student where sno in (select sno from sc where cno in(select cno from course where cname='高等数学'));
+
+
+-- 相关子查询
+select sno,sname from student where exists (select * from sc where sc.sno =student.sno and cno ='1001');
+
+
+update sc set grade =grade+5 where sno in(select sno from student where sdept ='cs');
+select * from sc;
+delete from sc where sno in(select sno from student where sage<18);
+select * from sc; 
